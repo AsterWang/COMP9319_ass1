@@ -529,7 +529,6 @@ int main(){
     
     Huffman_Node top_node;
     reconstruct_huffman_tree(structure,&top_node, *structure_length);
-//    fp = fopen("/Users/wangeric/Documents/study/9319/ass1/decodes.txt", "wb");
     Huffman_Node *tem_tree = malloc(sizeof(Huffman_Node));
     tem_tree = &top_node;
     unsigned char read_buffer[2];
