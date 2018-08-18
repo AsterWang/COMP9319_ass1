@@ -543,7 +543,6 @@ int main(){
     if (decode_str_len != 0) {
         fwrite(decode_char_list, sizeof(unsigned char), decode_str_len, fp_out);
     }
-//    free(tem_tree);
     fclose(fp);
     //==================================================================================================
     return 0;
