@@ -342,15 +342,9 @@ Huffman_Node* decode(Huffman_Node* tree,Huffman_Node* temp_tree,
 }
 
 
-//void search(unsigned char* original_chars, unsigned char* search_chars, int original_length){
-//    int i = 0;
-//    while (i < original_length) {
-//        while (<#condition#>) {
-//            <#statements#>
-//        }
-//    }
-//
-//}
+void search(unsigned char* original_chars, unsigned char* search_chars, int original_length){
+    
+}
 
 /**
  Reconstruct the huffman tree based on huffman tree constructure
@@ -433,7 +427,7 @@ int main(){
     FILE *fp;
     Heap *heap = init_Heap(260);
     int i;
-    fp = fopen("/Users/wangeric/Documents/study/9319/ass1/1234.png", "rb");
+    fp = fopen("/Users/wangeric/Documents/study/9319/ass1/1534599059147.jpg", "rb");
     if (fp == NULL) {
         perror("Error in opening file");
         return (-1);
@@ -483,7 +477,7 @@ int main(){
     fwrite(&b, sizeof(int), 1, fp_out);
     fwrite(&huffman_structure_length, sizeof(int), 1, fp_out);
     fwrite(&huffman_tree_structure, sizeof(unsigned char),1016, fp_out);
-    fp = fopen("/Users/wangeric/Documents/study/9319/ass1/1234.png", "rb");
+    fp = fopen("/Users/wangeric/Documents/study/9319/ass1/1534599059147.jpg", "rb");
     int count = 0;
     int times = 0;
 //    int ss = 1;
@@ -515,7 +509,7 @@ int main(){
     int *encoded_string_length = malloc(sizeof(int));
 
     fp = fopen("/Users/wangeric/Documents/study/9319/ass1/code_test2.huffman", "rb");
-    fp_out = fopen("/Users/wangeric/Documents/study/9319/ass1/copy.png", "wb");
+    fp_out = fopen("/Users/wangeric/Documents/study/9319/ass1/copy.jpg", "wb");
     
     
     fread(encoded_string_length, sizeof(int), 1, fp); //encode string 长度
