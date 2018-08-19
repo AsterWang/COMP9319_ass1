@@ -9,6 +9,17 @@
          contextName = "init_Heap:9319_Ass.c">
       </ContextState>
       <ContextState
+         contextName = "add_encoded_str_len_info:9319_ass1.c">
+         <PersistentStrings>
+            <PersistentString
+               value = "buffer[time]">
+            </PersistentString>
+            <PersistentString
+               value = "buffer[j]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
          contextName = "insert_seq:lzw.c">
          <PersistentStrings>
             <PersistentString
