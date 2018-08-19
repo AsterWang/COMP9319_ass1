@@ -483,7 +483,7 @@ void add_encoded_str_len_info(int encoded_str_len, FILE* fd, FILE* fpTemp){
 
 int main(){
 //    FILE* fp;
-    unsigned char original_string[] = "aaaaaaaaaaaaaaa";
+    unsigned char original_string[] = "aaaabbbbbaaaaaaaaa";
     int length = sizeof(original_string) /sizeof(unsigned char) - 1;
     unsigned char search_string[] = "aa";
     int search_length = sizeof(search_string) / sizeof(unsigned char) - 1;
