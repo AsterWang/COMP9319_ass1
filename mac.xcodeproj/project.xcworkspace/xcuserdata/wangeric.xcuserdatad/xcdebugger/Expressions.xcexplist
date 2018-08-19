@@ -61,7 +61,7 @@
                value = "bitarray[row]">
             </PersistentString>
             <PersistentString
-               value = " ((0x80 &gt;&gt; move_bits))">
+               value = "huffman_code_dict-&gt;codes[i]">
             </PersistentString>
             <PersistentString
                value = "bitarray[0]">
@@ -73,12 +73,20 @@
                value = "huffman_code_dict-&gt;character[i]">
             </PersistentString>
             <PersistentString
-               value = "huffman_code_dict-&gt;codes[i]">
+               value = " ((0x80 &gt;&gt; move_bits))">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
       <ContextState
          contextName = "generate_huffman_dict:9319_Ass.c">
+      </ContextState>
+      <ContextState
+         contextName = "search:9319_ass1.c">
+         <PersistentStrings>
+            <PersistentString
+               value = "t_chars[t_index]">
+            </PersistentString>
+         </PersistentStrings>
       </ContextState>
       <ContextState
          contextName = "main:9319_Ass.c">
@@ -161,6 +169,9 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
+         contextName = "init_huffman_code:9319_ass1.c">
+      </ContextState>
+      <ContextState
          contextName = "print_code:9319_Ass.c">
          <PersistentStrings>
             <PersistentString
@@ -181,9 +192,6 @@
                value = "strcpy(dict-&gt;seq[i], seq);">
             </PersistentString>
          </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "init_huffman_code:9319_ass1.c">
       </ContextState>
       <ContextState
          contextName = "insert_huffman_code:9319_ass1.c">
@@ -285,19 +293,19 @@
                value = "arr[0]">
             </PersistentString>
             <PersistentString
-               value = "huffman_code_dict-&gt;codes[y]">
+               value = "copy_tree-&gt;character">
+            </PersistentString>
+            <PersistentString
+               value = "arr[i] &amp; (*temp)">
             </PersistentString>
             <PersistentString
                value = "arr[i]">
             </PersistentString>
             <PersistentString
+               value = "huffman_code_dict-&gt;codes[y]">
+            </PersistentString>
+            <PersistentString
                value = "arr[1]">
-            </PersistentString>
-            <PersistentString
-               value = "copy_tree-&gt;character">
-            </PersistentString>
-            <PersistentString
-               value = "arr[i] &amp; (*temp)">
             </PersistentString>
          </PersistentStrings>
       </ContextState>

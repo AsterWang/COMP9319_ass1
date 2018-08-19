@@ -341,9 +341,67 @@ Huffman_Node* decode(Huffman_Node* tree,Huffman_Node* temp_tree,
     return temp_tree;
 }
 
+void last_occurrence(int* alphabet_last_occurrence,unsigned char* p_chars, int p_length){
+    for (int i = 0 ; i < p_length; i ++) {
+        unsigned char s = p_chars[i];
+        printf("s is :%d\n", s);
+        alphabet_last_occurrence[s] = i;
+    }
+}
 
-void search(unsigned char* original_chars, unsigned char* search_chars, int original_length){
-    
+int search(unsigned char* t_chars, unsigned char* p_chars, int original_length, int search_length){
+    //get last occurrence table
+    int alphabet_last_occurrence[257] = {-1};
+    memset(alphabet_last_occurrence, -1, sizeof(alphabet_last_occurrence));
+    last_occurrence(alphabet_last_occurrence, p_chars, search_length);
+    //初始index都在search_length
+    search_length --;
+    int p_index = search_length; // 该变量用于记录 P 里指向的元素位置
+    int t_index = p_index; // 该变脸用于记录 T 里指向的元素位置
+    int times = 0;
+    int found = 0;
+    if (original_length > search_length) {
+        while (t_index < original_length) {
+            //如果p[index] == t[index]， 往左移动。
+            while (t_chars[t_index] == p_chars[p_index]) {
+                t_index--;
+                p_index--;
+                if (p_index == -1) {
+                    times++;
+                    printf("p_index is : %d\n", p_index);
+                    printf("t_index is : %d\n", t_index);
+                    p_index = search_length;
+                    t_index = t_index + search_length + 2;
+                    printf("meet one matched string in original string ! \n");
+                    found = 1;
+                }
+            }
+            if(found == 0 && t_index < original_length){
+                //如果发现p[index] != t[index]，说明发现不匹配字符。进行三种不同的操作
+                int last_occurrence = alphabet_last_occurrence[t_chars[t_index]];
+                //如果查询字符串"存在"原字符串在不匹配处的字符
+                if (last_occurrence != -1){
+                    //如果该字符出现在当前位置的左边，说明lastest version还没过。
+                    if (last_occurrence < p_index){
+                        int distance = search_length - alphabet_last_occurrence[t_chars[t_index]];
+                        t_index += distance;
+                        p_index = search_length;
+                    } else {
+                        int distance = search_length - p_index;
+                        p_index = search_length;
+                        t_index = t_index + distance + 1;
+                    }
+                } else { //如果查询字符串“不存在"原字符串在不匹配处的字符
+//                    int distance = p_index;
+                    t_index += search_length + 1;
+                    p_index = search_length;
+                }
+            }
+            found = 0;
+        }
+    }
+    printf("times is %d\n", times);
+    return times;
 }
 
 /**
@@ -424,119 +482,129 @@ void add_encoded_str_len_info(int encoded_str_len, FILE* fd, FILE* fpTemp){
 
 
 int main(){
-    FILE *fp;
-    Heap *heap = init_Heap(260);
-    int i;
-    fp = fopen("/Users/wangeric/Documents/study/9319/ass1/1534599059147.jpg", "rb");
-    if (fp == NULL) {
-        perror("Error in opening file");
-        return (-1);
-    }
-    int c;
-    int char_table[260] = {0};
-    while ((c = fgetc(fp)) != EOF) {
-        char_table[c]++;
-    }
-    fclose(fp);
-    Huffman_Node *node;
-    for (i = 0; i < 256; i++) {
-        if (char_table[i] != 0) {
-            node = malloc(sizeof(Huffman_Node));
-            node->left_child = NULL;
-            node->right_child = NULL;
-            node->frequency = char_table[i];
-            node->character = i;
-            insert_element(heap, node);
-        }
-    }
-    
-    Huffman_Node* tree = merge_huffman_tree(heap);
-    unsigned char huffman_tree_structure[1020] = {0};
-    
-    //generate huffman structure
-    int huffman_structure_length = generate_huffman_tree_structure(huffman_tree_structure,tree);
-    printf("huffman_structure_length is :%d\n",huffman_structure_length);
-    
-    
-    //get huffman code dictionary by huffman-tree's structure.
-    Huffman_code_dict huffman_code_dict;
-    init_huffman_code(&huffman_code_dict);
-    //生成huffman code的字典
-    generate_huffman_dict(&huffman_code_dict,huffman_tree_structure,huffman_structure_length);
-    int total_length = 0;
-    for (int i = 0; i < huffman_code_dict.size; i++) {
-        printf("codes are %s, length is %d\n",huffman_code_dict.codes[i], (int)strlen(huffman_code_dict.codes[i]));
-    }
-    printf("total codes are : %d\n",total_length);
-    unsigned char bitarray[1000] = {0};
-    
-//===================================ENCODE======================================================
-    FILE *fp_out;
-    fp_out = fopen("/Users/wangeric/Documents/study/9319/ass1/code_test.huffman", "wb");
-    int b = 0;
-    fwrite(&b, sizeof(int), 1, fp_out);
-    fwrite(&huffman_structure_length, sizeof(int), 1, fp_out);
-    fwrite(&huffman_tree_structure, sizeof(unsigned char),1016, fp_out);
-    fp = fopen("/Users/wangeric/Documents/study/9319/ass1/1534599059147.jpg", "rb");
-    int count = 0;
-    int times = 0;
-//    int ss = 1;
-//    printf("characters is :\n");
-    int length = 0;
-    while ((c = fgetc(fp)) != EOF) {
-        encode(&huffman_code_dict, c, bitarray, &count,fp_out, &times, &length);
-    }
-//    printf("previous times is : %d\n", times * 8000);
-//    printf("\n====================================\n");
-    if (count != 0) { //如果有多余的bits,继续
-//        printf("count is %d\n", count);
-        int rest_bytes = (count + 8 - 1) / 8;
-        times = times * 8000 + count;
-//        printf("times is %d:\n", times);
-        fwrite(bitarray, sizeof(unsigned char), rest_bytes, fp_out);
-    }
-//    printf("times is %d\n",times);
-    fclose(fp_out);
-    fp_out = fopen("/Users/wangeric/Documents/study/9319/ass1/code_test.huffman", "rb");
-    FILE* fpTemp;
-    fpTemp = fopen("/Users/wangeric/Documents/study/9319/ass1/code_test2.huffman", "wb");
-    add_encoded_str_len_info(times, fp_out, fpTemp);
-//================================================================================================
-    
-    
-//===============================================DECODE============================================
-    int *structure_length = malloc(sizeof(int));
-    int *encoded_string_length = malloc(sizeof(int));
-
-    fp = fopen("/Users/wangeric/Documents/study/9319/ass1/code_test2.huffman", "rb");
-    fp_out = fopen("/Users/wangeric/Documents/study/9319/ass1/copy.jpg", "wb");
-    
-    
-    fread(encoded_string_length, sizeof(int), 1, fp); //encode string 长度
-    fread(structure_length, sizeof(int), 1, fp); //树结构长度
-    unsigned char* structure = malloc(sizeof(unsigned char) * (*structure_length)); //树结构
-    fread(structure, sizeof(unsigned char), *structure_length, fp);
-    int rest = 1024 - 8 - *structure_length;
-    fseek(fp, rest, SEEK_CUR);
-    int bytes_of_encoded_string = *encoded_string_length == 0 ? 0 : ((*encoded_string_length + 8 - 1) / 8);
-//    unsigned char* encoded_string = malloc(sizeof(unsigned char) * bytes_of_encoded_string); //encode string
-    
-    Huffman_Node top_node;
-    reconstruct_huffman_tree(structure,&top_node, *structure_length);
-    Huffman_Node *tem_tree = malloc(sizeof(Huffman_Node));
-    tem_tree = &top_node;
-    unsigned char read_buffer[2];
-    int decode_str_len = 0;
-    unsigned char decode_char_list[100] = {0};
-    for (int x = 0;x < bytes_of_encoded_string - 1; x ++) {
-        fread(read_buffer, sizeof(unsigned char), 2, fp);
-        Huffman_Node* r = decode(&top_node, tem_tree,read_buffer, bytes_of_encoded_string, encoded_string_length,&decode_str_len,decode_char_list,fp_out);
-        tem_tree = r;
-    }
-    if (decode_str_len != 0) {
-        fwrite(decode_char_list, sizeof(unsigned char), decode_str_len, fp_out);
-    }
-    fclose(fp);
-    //==================================================================================================
-    return 0;
+//    FILE* fp;
+    unsigned char original_string[] = "aaaaaaaaaaaaaaa";
+    int length = sizeof(original_string) /sizeof(unsigned char) - 1;
+    unsigned char search_string[] = "aa";
+    int search_length = sizeof(search_string) / sizeof(unsigned char) - 1;
+    search(original_string, search_string, length,search_length);
 }
+
+
+//int main(){
+//    FILE *fp;
+//    Heap *heap = init_Heap(260);
+//    int i;
+//    fp = fopen("/Users/wangeric/Documents/study/9319/ass1/1534599059147.jpg", "rb");
+//    if (fp == NULL) {
+//        perror("Error in opening file");
+//        return (-1);
+//    }
+//    int c;
+//    int char_table[260] = {0};
+//    while ((c = fgetc(fp)) != EOF) {
+//        char_table[c]++;
+//    }
+//    fclose(fp);
+//    Huffman_Node *node;
+//    for (i = 0; i < 256; i++) {
+//        if (char_table[i] != 0) {
+//            node = malloc(sizeof(Huffman_Node));
+//            node->left_child = NULL;
+//            node->right_child = NULL;
+//            node->frequency = char_table[i];
+//            node->character = i;
+//            insert_element(heap, node);
+//        }
+//    }
+//
+//    Huffman_Node* tree = merge_huffman_tree(heap);
+//    unsigned char huffman_tree_structure[1020] = {0};
+//
+//    //generate huffman structure
+//    int huffman_structure_length = generate_huffman_tree_structure(huffman_tree_structure,tree);
+//    printf("huffman_structure_length is :%d\n",huffman_structure_length);
+//
+//
+//    //get huffman code dictionary by huffman-tree's structure.
+//    Huffman_code_dict huffman_code_dict;
+//    init_huffman_code(&huffman_code_dict);
+//    //生成huffman code的字典
+//    generate_huffman_dict(&huffman_code_dict,huffman_tree_structure,huffman_structure_length);
+//    int total_length = 0;
+//    for (int i = 0; i < huffman_code_dict.size; i++) {
+//        printf("codes are %s, length is %d\n",huffman_code_dict.codes[i], (int)strlen(huffman_code_dict.codes[i]));
+//    }
+//    printf("total codes are : %d\n",total_length);
+//    unsigned char bitarray[1000] = {0};
+//
+////===================================ENCODE======================================================
+//    FILE *fp_out;
+//    fp_out = fopen("/Users/wangeric/Documents/study/9319/ass1/code_test.huffman", "wb");
+//    int b = 0;
+//    fwrite(&b, sizeof(int), 1, fp_out);
+//    fwrite(&huffman_structure_length, sizeof(int), 1, fp_out);
+//    fwrite(&huffman_tree_structure, sizeof(unsigned char),1016, fp_out);
+//    fp = fopen("/Users/wangeric/Documents/study/9319/ass1/1534599059147.jpg", "rb");
+//    int count = 0;
+//    int times = 0;
+////    int ss = 1;
+////    printf("characters is :\n");
+//    int length = 0;
+//    while ((c = fgetc(fp)) != EOF) {
+//        encode(&huffman_code_dict, c, bitarray, &count,fp_out, &times, &length);
+//    }
+////    printf("previous times is : %d\n", times * 8000);
+////    printf("\n====================================\n");
+//    if (count != 0) { //如果有多余的bits,继续
+////        printf("count is %d\n", count);
+//        int rest_bytes = (count + 8 - 1) / 8;
+//        times = times * 8000 + count;
+////        printf("times is %d:\n", times);
+//        fwrite(bitarray, sizeof(unsigned char), rest_bytes, fp_out);
+//    }
+////    printf("times is %d\n",times);
+//    fclose(fp_out);
+//    fp_out = fopen("/Users/wangeric/Documents/study/9319/ass1/code_test.huffman", "rb");
+//    FILE* fpTemp;
+//    fpTemp = fopen("/Users/wangeric/Documents/study/9319/ass1/code_test2.huffman", "wb");
+//    add_encoded_str_len_info(times, fp_out, fpTemp);
+////================================================================================================
+//
+//
+////===============================================DECODE============================================
+//    int *structure_length = malloc(sizeof(int));
+//    int *encoded_string_length = malloc(sizeof(int));
+//
+//    fp = fopen("/Users/wangeric/Documents/study/9319/ass1/code_test2.huffman", "rb");
+//    fp_out = fopen("/Users/wangeric/Documents/study/9319/ass1/copy.jpg", "wb");
+//
+//
+//    fread(encoded_string_length, sizeof(int), 1, fp); //encode string 长度
+//    fread(structure_length, sizeof(int), 1, fp); //树结构长度
+//    unsigned char* structure = malloc(sizeof(unsigned char) * (*structure_length)); //树结构
+//    fread(structure, sizeof(unsigned char), *structure_length, fp);
+//    int rest = 1024 - 8 - *structure_length;
+//    fseek(fp, rest, SEEK_CUR);
+//    int bytes_of_encoded_string = *encoded_string_length == 0 ? 0 : ((*encoded_string_length + 8 - 1) / 8);
+////    unsigned char* encoded_string = malloc(sizeof(unsigned char) * bytes_of_encoded_string); //encode string
+//
+//    Huffman_Node top_node;
+//    reconstruct_huffman_tree(structure,&top_node, *structure_length);
+//    Huffman_Node *tem_tree = malloc(sizeof(Huffman_Node));
+//    tem_tree = &top_node;
+//    unsigned char read_buffer[2];
+//    int decode_str_len = 0;
+//    unsigned char decode_char_list[100] = {0};
+//    for (int x = 0;x < bytes_of_encoded_string - 1; x ++) {
+//        fread(read_buffer, sizeof(unsigned char), 2, fp);
+//        Huffman_Node* r = decode(&top_node, tem_tree,read_buffer, bytes_of_encoded_string, encoded_string_length,&decode_str_len,decode_char_list,fp_out);
+//        tem_tree = r;
+//    }
+//    if (decode_str_len != 0) {
+//        fwrite(decode_char_list, sizeof(unsigned char), decode_str_len, fp_out);
+//    }
+//    fclose(fp);
+//    //==================================================================================================
+//    return 0;
+//}
