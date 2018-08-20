@@ -9,13 +9,10 @@
          contextName = "init_Heap:9319_Ass.c">
       </ContextState>
       <ContextState
-         contextName = "add_encoded_str_len_info:9319_ass1.c">
+         contextName = "generate_huffman_dict:9319_ass1.c">
          <PersistentStrings>
             <PersistentString
-               value = "buffer[time]">
-            </PersistentString>
-            <PersistentString
-               value = "buffer[j]">
+               value = "codes[i+1]">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -63,6 +60,9 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
+         contextName = "search_decode:9319_ass1.c">
+      </ContextState>
+      <ContextState
          contextName = "encode:9319_Ass.c">
          <PersistentStrings>
             <PersistentString
@@ -72,7 +72,7 @@
                value = "bitarray[row]">
             </PersistentString>
             <PersistentString
-               value = "huffman_code_dict-&gt;codes[i]">
+               value = " ((0x80 &gt;&gt; move_bits))">
             </PersistentString>
             <PersistentString
                value = "bitarray[0]">
@@ -84,7 +84,7 @@
                value = "huffman_code_dict-&gt;character[i]">
             </PersistentString>
             <PersistentString
-               value = " ((0x80 &gt;&gt; move_bits))">
+               value = "huffman_code_dict-&gt;codes[i]">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -267,6 +267,17 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
+         contextName = "add_encoded_str_len_info:9319_ass1.c">
+         <PersistentStrings>
+            <PersistentString
+               value = "buffer[time]">
+            </PersistentString>
+            <PersistentString
+               value = "buffer[j]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
          contextName = "recover_huffman_tree:9319_Ass.c">
          <PersistentStrings>
             <PersistentString
@@ -307,19 +318,19 @@
                value = "arr[0]">
             </PersistentString>
             <PersistentString
-               value = "copy_tree-&gt;character">
+               value = "huffman_code_dict-&gt;codes[y]">
             </PersistentString>
             <PersistentString
-               value = "arr[i] &amp; (*temp)">
+               value = "arr[1]">
             </PersistentString>
             <PersistentString
                value = "arr[i]">
             </PersistentString>
             <PersistentString
-               value = "huffman_code_dict-&gt;codes[y]">
+               value = "copy_tree-&gt;character">
             </PersistentString>
             <PersistentString
-               value = "arr[1]">
+               value = "arr[i] &amp; (*temp)">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -379,18 +390,16 @@
          contextName = "main:9319_ass1.c">
          <PersistentStrings>
             <PersistentString
-               value = "fread(&amp;buffer, sizeof(unsigned char), 256, fp_out)">
-            </PersistentString>
-            <PersistentString
                value = "&amp;original_string[0]">
             </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "generate_huffman_dict:9319_ass1.c">
-         <PersistentStrings>
             <PersistentString
-               value = "codes[i+1]">
+               value = "original_txt_buffer[0]">
+            </PersistentString>
+            <PersistentString
+               value = "original_txt_buffer[1]">
+            </PersistentString>
+            <PersistentString
+               value = "buffer[j]">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
