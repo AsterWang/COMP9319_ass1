@@ -350,7 +350,8 @@ Huffman_Node* search_decode(Huffman_Node* tree,
                             int *original_char_len,
                             int *encoded_str_length,
                             int *decode_str_len,
-                            unsigned char *buffer, int *rest_str){
+                            unsigned char *buffer, unsigned char *rest_str,
+                            int* rest_buffer_count){
     int index = 0;
     int row = 0;
     int m = 0;
@@ -382,6 +383,7 @@ Huffman_Node* search_decode(Huffman_Node* tree,
         if (*original_char_len == 0) {
 //            index ++;
             if (index < 16) {
+                (*rest_buffer_count) = 16 - index;
                 for (int i = 0; i < 16 - index; i++) {
                     rest_str[i] = ((0x80 >> m) & encoded_string[row]) == 0?48:49;
                     m ++;
@@ -401,13 +403,13 @@ Huffman_Node* search_decode(Huffman_Node* tree,
 unsigned char fgetc_buffer(unsigned char* buffer, //用来存储原文缓存字符
                            int* current_buffer_index, //用来记录现在buffer中读取到的位置
                            unsigned char*rest_buffer, // 用来保存之前剩余的bits的 0/1数据
-                           int *rest_buffer_index, //保存 0/1数据的个数
+                           int *rest_buffer_count, //保存 0/1数据的个数
                            int *current_rest_buffer_index, //保存现在读取到rest_buffer中的位置。
                            Huffman_Node* tree,//遍历树需要。
                            int search_length,
                            FILE* fp_search){
     unsigned char c = {0};
-    
+    Huffman_Node* temp_tree = tree;
     //如果目前还没读取完buffer中的缓存数据，那么先读取其中的数据。
     if (*current_rest_buffer_index < search_length * 3){
         c = buffer[*current_rest_buffer_index];
@@ -418,10 +420,10 @@ unsigned char fgetc_buffer(unsigned char* buffer, //用来存储原文缓存字�
     //如果buffer中的数据已经读取完，如果rest_buffer中还有剩余的 0/1数据，那么先读取rest_buffer中的数据
     //如果有有发现leave note，则全部加入到buffer中，然后返回buffer[0].
     int found_leave = 0;
-    if (*current_rest_buffer_index <= *rest_buffer_index) {
+    if (*current_rest_buffer_index <= *rest_buffer_count) {
         memset(buffer, 0, search_length * 3);
         (*current_rest_buffer_index) = 0;
-        for (int i = *current_rest_buffer_index; i < *rest_buffer_index; i ++) {
+        for (int i = *current_rest_buffer_index; i < *rest_buffer_count; i ++) {
             if (rest_buffer[i] == 48) {
                 tree = tree->left_child;
             } else {
@@ -431,6 +433,7 @@ unsigned char fgetc_buffer(unsigned char* buffer, //用来存储原文缓存字�
             //如果发现leave note,加入到buffer中。
             if (tree->left_child == NULL && tree->right_child == NULL) {
                 buffer[found_leave] = tree->character;
+                tree = temp_tree;
             }
         }
     }
@@ -452,6 +455,7 @@ unsigned char fgetc_buffer(unsigned char* buffer, //用来存储原文缓存字�
             }
             if (tree->left_child == NULL && tree->right_child == NULL) {
                 buffer[found_leave++] = tree->character;
+                tree = temp_tree;
             }
             index ++;
             m ++;
@@ -461,6 +465,7 @@ unsigned char fgetc_buffer(unsigned char* buffer, //用来存储原文缓存字�
             }
             //如果buffer满了，但是 16个bits 还没读完，那么将剩余的Bits读入rest_buffer中。
             if (found_leave == search_length * 3) {
+                (*rest_buffer_count) = 16 - index;
                 (*current_rest_buffer_index) = 0; //把rest_buffer_index 设置为0，下一次从第0个位置开始读取 0/1 数据。
                 for (int i = index ; i < 16; i++) {
                     rest_buffer[i] = ((0x80 >> m) & new_bytes[row]) == 0?48:49;
@@ -471,16 +476,22 @@ unsigned char fgetc_buffer(unsigned char* buffer, //用来存储原文缓存字�
                         row ++;
                     }
                 }
+                break;
             }
         }
     }
+    c = buffer[0];
+    current_buffer_index ++;
+    return c;
 }
 
 /**
  t_chars是一个二维数组，每一行的列数等于search_chars的长度，一共两列
  每次移动的时候，从文件中读取对应移动的个数，把原来的字符替换。直到没有多余的字符可以读取。
  */
-int search(unsigned char **t_chars,char* p_chars, int search_length, FILE* fp_search){
+int search(unsigned char **t_chars,char* p_chars, int search_length,
+           FILE* fp_search,unsigned char *buffer,int *current_buffer_index,
+           unsigned char *rest_buffer,int *rest_buffer_index,int *current_rest_buffer_index,Huffman_Node* tree){
     //get last occurrence table
     int alphabet_last_occurrence[257] = {-1};
     int window_size = search_length;
@@ -497,7 +508,7 @@ int search(unsigned char **t_chars,char* p_chars, int search_length, FILE* fp_se
     int row = 0; //用来记录此时移动到了第几列，需要用 t_index % 2 取余来获取当前行，2行为一个周期。
     int column = search_length; //用来记录此时移动到第row行的第column列，需要用 t_index / window_size 来获取当前列，每一行的长度 = search_length。
     int distance = 0; //记录移动的格数
-    int current_char = 0; //用来读取字符。
+    unsigned char current_char = 0; //用来读取字符。
     int replace_position = 0;
     int number_of_replace_char = 0;
     int over = 0;
@@ -527,7 +538,8 @@ int search(unsigned char **t_chars,char* p_chars, int search_length, FILE* fp_se
                             replace_row %= 2;
                             int replace_column = replace_position % window_size;
     //                        fread(&t_chars[replace_row][replace_column], sizeof(unsigned char), 1, fp);
-                           if(((current_char = fgetc(fp_search)) != EOF)){
+                            if((current_char = fgetc_buffer(buffer,current_buffer_index,rest_buffer,rest_buffer_index,current_rest_buffer_index,tree, search_length, fp_search)) != '\0'){
+//                           if(((current_char = fgetc(fp_search)) != EOF)){
                                 t_chars[replace_row][replace_column] = current_char;
                                total_original_number ++;
                             } else {
@@ -599,7 +611,8 @@ int search(unsigned char **t_chars,char* p_chars, int search_length, FILE* fp_se
     //                    t_chars[replace_row][replace_column] = fgetc(fp);
     //                    fread(&t_chars[replace_row][replace_column], sizeof(unsigned char), 1, fp);
                         
-                        if(((current_char = fgetc(fp_search)) != EOF)){
+//                        if(((current_char = fgetc(fp_search)) != EOF)){
+                        if((current_char = fgetc_buffer(buffer,current_buffer_index,rest_buffer,rest_buffer_index,current_rest_buffer_index,tree, search_length, fp_search)) != '\0'){
                             t_chars[replace_row][replace_column] = current_char;
                             total_original_number ++;
                         } else {
@@ -913,8 +926,10 @@ int main(){
          int original_char_len = search_length * 3;
          unsigned char *buffer = malloc(sizeof(unsigned char) * (search_length * 3) + 1);
 //         int finish_flag = 0;
-         int *rest_str = malloc(sizeof(int) * 16);
+        unsigned char *rest_str = malloc(sizeof(unsigned char) * (search_length *3));
     
+        //记录还剩下多少个bits剩余
+        int rest_buffer_count = 0;
         //每次读2个bytes, 直到读满查询字符串长度的3倍，作为read buffer
         //如果读满 search_length * 3,则停止
         //如果未读满 search_length * 3就提前停止，那么将保留这个read_buffer中剩余Bits对应的 0/1 数组。
@@ -923,7 +938,7 @@ int main(){
              Huffman_Node* r = search_decode(&top_node, tem_tree,
                                       read_buffer,&original_char_len,
                                       encoded_string_length,&decode_str_len,
-                                      buffer, rest_str);
+                                      buffer, rest_str,&rest_buffer_count);
              tem_tree = r;
              bytes_of_encoded_string -=2;
          }
@@ -938,7 +953,16 @@ int main(){
     }
     original_txt_buffer[0] = string_1;
     original_txt_buffer[1] = string_2;
-    search(original_txt_buffer, search_string, search_length, fp);
+    int current_buffer_index = search_length * 2;
+    
+//    search(unsigned char **t_chars,char* p_chars, int search_length,
+//           FILE* fp_search,unsigned char *buffer,int *current_buffer_index,
+//           unsigned char *rest_buffer,int *rest_buffer_index,int *current_rest_buffer_index,Huffman_Node* tree)
+    
+    //初始化目前读到的rest_buffer的index = 0;
+    int current_rest_buffer_index = 0;
+    search(original_txt_buffer, search_string, search_length, fp,
+           buffer,&current_buffer_index,rest_str,&rest_buffer_count,&current_rest_buffer_index,&top_node);
          
 //     }
     return 0;
