@@ -95,7 +95,10 @@
          contextName = "search:9319_ass1.c">
          <PersistentStrings>
             <PersistentString
-               value = "t_chars[t_index]">
+               value = "t_chars[1]">
+            </PersistentString>
+            <PersistentString
+               value = "t_chars[0]">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -377,6 +380,9 @@
          <PersistentStrings>
             <PersistentString
                value = "fread(&amp;buffer, sizeof(unsigned char), 256, fp_out)">
+            </PersistentString>
+            <PersistentString
+               value = "&amp;original_string[0]">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
