@@ -380,22 +380,29 @@ Huffman_Node* search_decode(Huffman_Node* tree,
             m = 0;
             row ++;
         }
-        if (*original_char_len == 0) {
-//            index ++;
+        (*encoded_str_length) --;
+        //可能读到两个bytes时，不是所有的bits都是encoded string,所以要根据encoded_str_length 来确定最后的数量。
+        if (*original_char_len == 0 && *encoded_str_length > 0) {
+//            index --;
             if (index < 16) {
                 (*rest_buffer_count) = 16 - index;
-                for (int i = 0; i < 16 - index; i++) {
+                if (*rest_buffer_count > *encoded_str_length) {
+                    *rest_buffer_count = *encoded_str_length;
+                }
+                for (int i = 0; i < *rest_buffer_count; i++) {
                     rest_str[i] = ((0x80 >> m) & encoded_string[row]) == 0?48:49;
                     m ++;
                     if (m == 8) {
                         m = 0;
                         row ++;
                     }
+//                    (*encoded_str_length) --;
                 }
             }
             full_flag = 1;
+            break;
+            //rest_buffer 中的 0/1相当于没有读过。
         }
-        (*encoded_str_length) --;
     }
     return temp_tree;
 }
@@ -407,48 +414,74 @@ unsigned char fgetc_buffer(unsigned char* buffer, //用来存储原文缓存字�
                            int *current_rest_buffer_index, //保存现在读取到rest_buffer中的位置。
                            Huffman_Node* tree,//遍历树需要。
                            int search_length,
-                           FILE* fp_search){
+                           FILE* fp_search,
+                           int* encoded_string_length){
     unsigned char c = {0};
     Huffman_Node* temp_tree = tree;
     //如果目前还没读取完buffer中的缓存数据，那么先读取其中的数据。
-    if (*current_rest_buffer_index < search_length * 3){
-        c = buffer[*current_rest_buffer_index];
-        (*current_rest_buffer_index) ++;
+    
+    if (*encoded_string_length == 0 && buffer[0] == '\0') {
+        return '\0';
+    }
+    
+    if (*current_buffer_index < ((search_length + 1) * 3)){
+        int index = *current_buffer_index;
+        c = buffer[index];
+//        printf("char in buffer ,c is %c\n", c);
+        (*current_buffer_index) ++;
         return c;
     }
     
     //如果buffer中的数据已经读取完，如果rest_buffer中还有剩余的 0/1数据，那么先读取rest_buffer中的数据
     //如果有有发现leave note，则全部加入到buffer中，然后返回buffer[0].
     int found_leave = 0;
-    if (*current_rest_buffer_index <= *rest_buffer_count) {
-        memset(buffer, 0, search_length * 3);
-        (*current_rest_buffer_index) = 0;
-        for (int i = *current_rest_buffer_index; i < *rest_buffer_count; i ++) {
+    memset(buffer, 0, ((search_length+1) * 3));
+    if (*current_rest_buffer_index < *rest_buffer_count) {
+        (*current_buffer_index) = 0;
+        for (int j = 0; j < *rest_buffer_count; j++) {
+            printf("%c",rest_buffer[j]);
+        }
+        printf("\n");
+        for (int i = *current_rest_buffer_index; i < *rest_buffer_count && rest_buffer[i] != '\0'; i ++) {
             if (rest_buffer[i] == 48) {
                 tree = tree->left_child;
             } else {
                 tree = tree->right_child;
             }
             (*current_rest_buffer_index) ++;
+            (*encoded_string_length) --;
             //如果发现leave note,加入到buffer中。
             if (tree->left_child == NULL && tree->right_child == NULL) {
                 buffer[found_leave] = tree->character;
+                found_leave ++;
+                //如果rest_buffer里面的 0/1 填满了 buffer中的数据，那么直接返回buffer中的第一个元素，并把current_buffer_index 设为1 ，下次直接从第二个buffer数据开始取。
+                if (found_leave == (search_length + 1) * 3) {
+                    (*current_buffer_index) = 1;
+                    return buffer[0];
+                }
                 tree = temp_tree;
             }
         }
     }
     //如果在rest buffer中找到的leave node 还没有满足search_length 的 3 倍，说明buffer还没被填满。则从.huffman文件中读取bytes,填充buffer.
-    if (found_leave < search_length * 3){
-        (*current_rest_buffer_index) = 0;
-        memset(rest_buffer, 0, search_length * 3);
+//    if((*encoded_string_length) == 0 && buffer[0] == '\0'){
+//        return '\0';
+//    }
+    (*current_rest_buffer_index) = 0;
+    memset(rest_buffer, 0,  17);
+    while (found_leave < ((search_length+1) * 3) && *encoded_string_length > 0){
         unsigned char* new_bytes = malloc(sizeof(unsigned char) * 2);
+        (*current_buffer_index) = 0;
         fread(new_bytes, sizeof(unsigned char), 2, fp_search);
         int index = 0;
         int row = 0;
         int m = 0;
-        while (index < 16) {
-            rest_buffer[index] = ((0x80 >> m) & new_bytes[row]) == 0?48:49;
-            if (rest_buffer[index] == 48) {
+        unsigned char str[16] = {0};
+        printf("str[index] are :");
+        while (index < 16 && *encoded_string_length > 0) {
+            str[index] = ((0x80 >> m) & new_bytes[row]) == 0?48:49;
+            printf("%c", str[index]);
+            if (str[index] == 48) {
                 tree = tree->left_child;
             } else {
                 tree = tree->right_child;
@@ -463,13 +496,20 @@ unsigned char fgetc_buffer(unsigned char* buffer, //用来存储原文缓存字�
                 m = 0;
                 row ++;
             }
+            (*encoded_string_length) --;
             //如果buffer满了，但是 16个bits 还没读完，那么将剩余的Bits读入rest_buffer中。
-            if (found_leave == search_length * 3) {
+            if (found_leave == ((search_length+1) * 3)) {
+                printf("\nfull....");
                 (*rest_buffer_count) = 16 - index;
+                //如果最后两个bytes中不是所有的Bit都是encoded string，那么只需要处理encoded 的bits
+                if (*rest_buffer_count > *encoded_string_length) {
+                    *rest_buffer_count = *encoded_string_length;
+                }
                 (*current_rest_buffer_index) = 0; //把rest_buffer_index 设置为0，下一次从第0个位置开始读取 0/1 数据。
-                for (int i = index ; i < 16; i++) {
+                for (int i = 0 ; i < *rest_buffer_count; i++) {
                     rest_buffer[i] = ((0x80 >> m) & new_bytes[row]) == 0?48:49;
-                    index ++;
+                    printf("%c", rest_buffer[i]);
+//                    index ++;
                     m ++;
                     if (m == 8) {
                         m = 0;
@@ -481,7 +521,7 @@ unsigned char fgetc_buffer(unsigned char* buffer, //用来存储原文缓存字�
         }
     }
     c = buffer[0];
-    current_buffer_index ++;
+    (*current_buffer_index) ++;
     return c;
 }
 
@@ -491,7 +531,8 @@ unsigned char fgetc_buffer(unsigned char* buffer, //用来存储原文缓存字�
  */
 int search(unsigned char **t_chars,char* p_chars, int search_length,
            FILE* fp_search,unsigned char *buffer,int *current_buffer_index,
-           unsigned char *rest_buffer,int *rest_buffer_index,int *current_rest_buffer_index,Huffman_Node* tree){
+           unsigned char *rest_buffer,int *rest_buffer_index,int *current_rest_buffer_index,
+           Huffman_Node* tree, int* encoded_string_length){
     //get last occurrence table
     int alphabet_last_occurrence[257] = {-1};
     int window_size = search_length;
@@ -514,7 +555,7 @@ int search(unsigned char **t_chars,char* p_chars, int search_length,
     int over = 0;
     int over_index = 0;
 //    if (original_length > search_length) {
-        while (t_index < total_original_number) {
+        while (t_index < total_original_number && t_chars[row][column] != '\0') {
             //如果p[index] == t[index]， 往左移动。
             while (t_chars[row][column] == p_chars[p_index]) {
                 t_index--;
@@ -525,23 +566,18 @@ int search(unsigned char **t_chars,char* p_chars, int search_length,
                 if (p_index == -1) {
                     times++;
                     printf("p_index is : %d\n", p_index);
-                    printf("t_index is : %d\n", t_index);
+                    printf("t_index is : %d\n", t_index + search_length + 1);
                     p_index = search_length;
-                
-//                    row = (t_index -1 + 1 + window_size) / window_size;
-//                    row = row % 2;
-//                    column = t_index / window_size - 1;
-//                    add_char_to_window(search_length + 2);
-                    if (over == 0) {
+                    printf("found!...\n");
+//                    if (over == 0) {
                         for (int i = 0 ; i < 1; i++) {
                             int replace_row = (replace_position + 1 - 1 + window_size) / window_size - 1;
                             replace_row %= 2;
                             int replace_column = replace_position % window_size;
-    //                        fread(&t_chars[replace_row][replace_column], sizeof(unsigned char), 1, fp);
-                            if((current_char = fgetc_buffer(buffer,current_buffer_index,rest_buffer,rest_buffer_index,current_rest_buffer_index,tree, search_length, fp_search)) != '\0'){
-//                           if(((current_char = fgetc(fp_search)) != EOF)){
+                            if((current_char = fgetc_buffer(buffer,current_buffer_index,rest_buffer,rest_buffer_index,current_rest_buffer_index,tree, search_length, fp_search,encoded_string_length)) != '\0'){
+                                printf("get from buffer, the character is %c\n", current_char);
                                 t_chars[replace_row][replace_column] = current_char;
-                               total_original_number ++;
+                                total_original_number ++;
                             } else {
                                 t_chars[replace_row][replace_column] = '\0';
                                 over = 1;
@@ -550,21 +586,15 @@ int search(unsigned char **t_chars,char* p_chars, int search_length,
                             }
                             printf("the (%d, %d) is %c\n", replace_row, replace_column, t_chars[replace_row][replace_column]);
                             replace_position++;
-                            //                    add_char_to_window(search_length + 1, row, column, t_chars);
                         }
-                    }
-//                    replace_position += search_length + 2;
                     t_index = t_index + search_length + 2;
                     row = (t_index + 1 - 1 + window_size) / window_size - 1;
                     row %= 2;
                     column = t_index % window_size;
-                    
-                    printf("meet one matched string in original string ! \n");
                     found = 1;
                 }
             }
             if(found == 0 && t_chars[row][column] != '\0'){
-                
                 //如果发现p[index] != t[index]，说明发现不匹配字符。进行三种不同的操作
                 int last_occurrence = alphabet_last_occurrence[t_chars[row][column]];
                 //如果查询字符串"存在"原字符串在不匹配处的字符
@@ -575,44 +605,31 @@ int search(unsigned char **t_chars,char* p_chars, int search_length,
                         printf("found lastest version in the left...\n");
                         distance = search_length - alphabet_last_occurrence[t_chars[row][column]];
                         t_index += distance;
-//                        row = (t_index -1 + 1 + window_size) / window_size;
-//                        row = row % 2;
-//                        column = t_index / window_size - 1;
-//                        add_char_to_window(distance);
                         number_of_replace_char = distance;
                         p_index = search_length;
                     } else {
                         printf("found lastest version in the right...\n");
-                        distance = search_length - p_index;
+                        distance = (search_length + 1) - p_index;
                         p_index = search_length;
-                        t_index = t_index + distance + 1;
-                        number_of_replace_char = distance - (search_length - p_index);
-//                        row = (t_index -1 + 1 + window_size) / window_size;
-//                        row = row % 2;
-//                        column = t_index / window_size - 1;
-//                        add_char_to_window(distance + 1);
-                        
-                        
+                        t_index = t_index + distance;
+                        number_of_replace_char = 1;
                     }
                 } else { //如果查询字符串“不存在"原字符串在不匹配处的字符
                     //                    int distance = p_index;
-                    printf("not found...\n");
+//                    printf("not found...\n");
                     distance = search_length + 1;
                     t_index += distance;
                     number_of_replace_char = p_index + 1;
                     p_index = search_length;
                 }
 //                int c = 0;
-                if (over == 0) {
+//                if (over == 0) {
                     for (int i = 0 ; i < number_of_replace_char; i++) {
                         int replace_row = (replace_position -1 + 1 + window_size) / window_size - 1;
                         replace_row %= 2;
                         int replace_column = replace_position % window_size;
-    //                    t_chars[replace_row][replace_column] = fgetc(fp);
-    //                    fread(&t_chars[replace_row][replace_column], sizeof(unsigned char), 1, fp);
-                        
-//                        if(((current_char = fgetc(fp_search)) != EOF)){
-                        if((current_char = fgetc_buffer(buffer,current_buffer_index,rest_buffer,rest_buffer_index,current_rest_buffer_index,tree, search_length, fp_search)) != '\0'){
+                        if((current_char = fgetc_buffer(buffer,current_buffer_index,rest_buffer,rest_buffer_index,current_rest_buffer_index,tree, search_length, fp_search,encoded_string_length)) != '\0'){
+                            printf("\n get from buffer, the character is %c\n", current_char);
                             t_chars[replace_row][replace_column] = current_char;
                             total_original_number ++;
                         } else {
@@ -624,8 +641,7 @@ int search(unsigned char **t_chars,char* p_chars, int search_length,
                         printf("the (%d, %d) is %c\n", replace_row, replace_column, t_chars[replace_row][replace_column]);
                         replace_position ++;
                     }
-                }
-//                t_index = t_index + search_length + 2;
+//                }
                 row = (t_index + 1 - 1 + window_size) / window_size - 1;
                 row %= 2;
                 column = t_index % window_size;
@@ -733,172 +749,159 @@ void add_encoded_str_len_info(int encoded_str_len, char *file){
 }
 
 
-//int main(int argc, char* argv[]){
-//    FILE* fp_search;
-//    fp_search = fopen("/Users/wangeric/Documents/C++/mac/test.txt", "rb");
-//    char search_string[] = "aa";
-//    int search_length = sizeof(search_string) / sizeof(unsigned char) - 1;
-////    unsigned char original_string[2][search_length] = {0};
-//    unsigned char** original_string = malloc(sizeof(unsigned char*) * 2);
-//    unsigned char *string_1 = malloc(sizeof(unsigned char) * search_length);
-//    unsigned char *string_2 = malloc(sizeof(unsigned char) * search_length);
-////    original_string[0] = {0};
-////    original_string[1] = {0};
-////    int length = sizeof(original_string) /sizeof(unsigned char) - 1;
-//
-////    original_string[0] = search_string;
-//    fread(string_1, sizeof(unsigned char), search_length, fp_search);
-//    fread(string_2, sizeof(unsigned char), search_length, fp_search);
-//
-//    original_string[0] = string_1;
-//    original_string[1] = string_2;
-////    int c = fgetc(fp_search);
-////    printf("%c", c);
-//    search(original_string,search_string,search_length,fp_search);
-//}
+int main(int argc, char* argv[]){
+    if (strcmp(argv[1],"-e") == 0) {
+        printf("encoding......\n");
+//        printf("encoding file is %s\n", argv[2]);
+        FILE *fp;
+        Heap *heap = init_Heap(260);
+        int i;
+//        fp = fopen(argv[2], "rb");
+        fp = fopen("/Users/wangeric/Documents/C++/mac/test.txt", "rb");
+        if (fp == NULL) {
+            perror("Error in opening file");
+            return (-1);
+        }
+        FILE *fp_out;
+        //        fp_out = fopen(argv[3], "wb");
+        fp_out = fopen("/Users/wangeric/Documents/C++/mac/output.huffman", "wb");
+        int c;
+        int char_count = 0;
+        int char_table[260] = {0};
+//        int alphabet_number = 0;
+        while ((c = fgetc(fp)) != EOF) {
+            char_table[c]++;
+            char_count ++;
+        }
+        fclose(fp);
+        Huffman_Node *node = malloc(sizeof(Huffman_Node));
+        int alphabet_number = 0;
+        for (i = 0; i < 256; i++) {
+            if (char_table[i] != 0) {
+                alphabet_number ++;
+                node = malloc(sizeof(Huffman_Node));
+                node->left_child = NULL;
+                node->right_child = NULL;
+                node->frequency = char_table[i];
+                node->character = i;
+                insert_element(heap, node);
+            }
+        }
+        int huffman_structure_length;
+        unsigned char bitarray[1000] = {0};
+        if (alphabet_number == 1) {
+            huffman_structure_length = 2;
+//            node->character;
+            unsigned char single_struc[1016] = {0};
+            single_struc[0] = 49;
+            single_struc[1] = node->character;
+            int stru_size = 2;
+            fwrite(&node->frequency, sizeof(int), 1, fp_out); //encoded string长度
+            fwrite(&stru_size,sizeof(int) , 1, fp_out); //结构长度 = 2
+            fwrite(single_struc, sizeof(unsigned char),1016, fp_out); //树结构
+            int bytes = (node->frequency - 1 + 8) / 8;
+            unsigned char zero = 0;
+            fwrite(&zero, sizeof(unsigned char), bytes, fp_out);
+            fclose(fp_out);
+            fclose(fp);
+        } else {
+            Huffman_Node* tree = merge_huffman_tree(heap);
+            unsigned char huffman_tree_structure[1020] = {0};
+
+            //generate huffman structure
+            huffman_structure_length = generate_huffman_tree_structure(huffman_tree_structure,tree);
+            printf("huffman_structure_length is :%d\n",huffman_structure_length);
 
 
-int main(){
-//    if (strcmp(argv[1],"-e") == 0) {
-//        printf("encoding......\n");
-////        printf("encoding file is %s\n", argv[2]);
-//        FILE *fp;
-//        Heap *heap = init_Heap(260);
-//        int i;
-////        fp = fopen(argv[2], "rb");
-//        fp = fopen(argv[2], "rb");
-////        fp = fopen("/Users/wangeric/Documents/C++/mac/test.txt", "rb");
-//        if (fp == NULL) {
-//            perror("Error in opening file");
-//            return (-1);
-//        }
-//        int c;
-//        int char_count = 0;
-//        int char_table[260] = {0};
-//        while ((c = fgetc(fp)) != EOF) {
-//            char_table[c]++;
-//            char_count ++;
-//        }
-//        fclose(fp);
-//        Huffman_Node *node;
-//        for (i = 0; i < 256; i++) {
-//            if (char_table[i] != 0) {
-//                node = malloc(sizeof(Huffman_Node));
-//                node->left_child = NULL;
-//                node->right_child = NULL;
-//                node->frequency = char_table[i];
-//                node->character = i;
-//                insert_element(heap, node);
-//            }
-//        }
-//
-//        Huffman_Node* tree = merge_huffman_tree(heap);
-//        unsigned char huffman_tree_structure[1020] = {0};
-//
-//        //generate huffman structure
-//        int huffman_structure_length = generate_huffman_tree_structure(huffman_tree_structure,tree);
-//        printf("huffman_structure_length is :%d\n",huffman_structure_length);
-//
-//
-//        //get huffman code dictionary by huffman-tree's structure.
-//        Huffman_code_dict huffman_code_dict;
-//        init_huffman_code(&huffman_code_dict);
-//        //生成huffman code的字典
-//        generate_huffman_dict(&huffman_code_dict,huffman_tree_structure,huffman_structure_length);
-////        int total_length = 0;
-//        for (int i = 0; i < huffman_code_dict.size; i++) {
-//            printf("codes are %s, length is %d\n",huffman_code_dict.codes[i], (int)strlen(huffman_code_dict.codes[i]));
-//        }
-////        printf("total codes are : %d\n",total_length);
-//        unsigned char bitarray[1000] = {0};
-//
-//    //===================================ENCODE======================================================
-//        FILE *fp_out;
-//        fp_out = fopen(argv[3], "wb");
-//        int padding = 0;
-//        fwrite(&padding, sizeof(int),1, fp_out);
-//        fwrite(&huffman_structure_length, sizeof(int), 1, fp_out);
-//        fwrite(&huffman_tree_structure, sizeof(unsigned char),1016, fp_out);
-//        fp = fopen(argv[2], "rb");
-////        fp = fopen(argv[2], "rb");
-//        int count = 0;
-//        int times = 0;
-//    //    int ss = 1;
-//    //    printf("characters is :\n");
-//        int length = 0;
-//        while ((c = fgetc(fp)) != EOF) {
-//            encode(&huffman_code_dict, c, bitarray, &count,fp_out, &times, &length);
-//        }
-//        if (count != 0) { //如果有多余的bits,继续
-//            int rest_bytes = (count + 8 - 1) / 8;
-//            printf("rest bytes are : %d\n", rest_bytes);
-//            times = times * 8000 + count;
-//            printf("times is %d\n", times);
-//            fwrite(bitarray, sizeof(unsigned char), rest_bytes, fp_out);
-//        }
-//        fseek(fp_out, 0, SEEK_SET);
-////        int header = 10;
-//        fwrite(&times, sizeof(int), 1, fp_out);
-//        fclose(fp_out);
-////        fp_out = fopen("/Users/wangeric/Documents/C++/mac/output.huffman", "rb");
-////        FILE* fp_out;
-////        );
-////    char file[49] = "/Users/wangeric/Documents/C++/mac/output.huffman";
-////        add_encoded_str_len_info(times, argv[3]);
-////        fclose(fp_out);
-////        fclose(fpTemp);
-//    }
+            //get huffman code dictionary by huffman-tree's structure.
+            Huffman_code_dict huffman_code_dict;
+            init_huffman_code(&huffman_code_dict);
+            //生成huffman code的字典
+            generate_huffman_dict(&huffman_code_dict,huffman_tree_structure,huffman_structure_length);
+    //        int total_length = 0;
+            for (int i = 0; i < huffman_code_dict.size; i++) {
+                printf("codes are %s, character is %c\n",huffman_code_dict.codes[i], huffman_code_dict.character[i]);
+            }
+    //        printf("total codes are : %d\n",total_length);
+            
+
+        //===================================ENCODE======================================================
+            
+            int padding = 0;
+            fwrite(&padding, sizeof(int),1, fp_out);
+            fwrite(&huffman_structure_length, sizeof(int), 1, fp_out);
+            fwrite(&huffman_tree_structure, sizeof(unsigned char),1016, fp_out);
+    //        fp = fopen(argv[2], "rb");
+            fp = fopen("/Users/wangeric/Documents/C++/mac/test.txt", "rb");
+            int count = 0;
+            int times = 0;
+            int length = 0;
+            while ((c = fgetc(fp)) != EOF) {
+                encode(&huffman_code_dict, c, bitarray, &count,fp_out, &times, &length);
+            }
+            if (count != 0) { //如果有多余的bits,继续
+                int rest_bytes = (count + 8 - 1) / 8;
+                printf("rest bytes are : %d\n", rest_bytes);
+                times = times * 8000 + count;
+                printf("times is %d\n", times);
+                fwrite(bitarray, sizeof(unsigned char), rest_bytes, fp_out);
+            }
+            fseek(fp_out, 0, SEEK_SET);
+            fwrite(&times, sizeof(int), 1, fp_out);
+            fclose(fp_out);
+        }
+    }
 ////================================================================================================
 //
 //
 ////===============================================DECODE============================================
-//    else if (strcmp(argv[1],"-d") == 0) {
-//        printf("decoding.....\n");
-//        int *structure_length = malloc(sizeof(int));
-//        int *encoded_string_length = malloc(sizeof(int));
-//        FILE* fp;
-//        FILE* fp_out;
+    else if (strcmp(argv[1],"-d") == 0) {
+        printf("decoding.....\n");
+        int *structure_length = malloc(sizeof(int));
+        int *encoded_string_length = malloc(sizeof(int));
+        FILE* fp;
+        FILE* fp_out;
 //        fp = fopen(argv[2], "rb");
-//        fp_out = fopen(argv[3], "wb");
-//        fread(encoded_string_length, sizeof(int), 1, fp); //encode string 长度
-//        fread(structure_length, sizeof(int), 1, fp); //树结构长度
-//        unsigned char* structure = malloc(sizeof(unsigned char) * (*structure_length)); //树结构
-//        fread(structure, sizeof(unsigned char), *structure_length, fp);
-//        int rest = 1024 - 8 - *structure_length;
-//        fseek(fp, rest, SEEK_CUR);
-//        int bytes_of_encoded_string = *encoded_string_length == 0 ? 0 : ((*encoded_string_length + 8 - 1) / 8);
-//    //    unsigned char* encoded_string = malloc(sizeof(unsigned char) * bytes_of_encoded_string); //encode string
-//
-//        Huffman_Node top_node;
-//        reconstruct_huffman_tree(structure,&top_node, *structure_length);
-//        Huffman_Node *tem_tree = malloc(sizeof(Huffman_Node));
-//        tem_tree = &top_node;
-//        unsigned char read_buffer[2];
-//        int decode_str_len = 0;
-//        unsigned char decode_char_list[100] = {0};
-//        for (int x = 0;x < bytes_of_encoded_string - 1; x ++) {
-//            fread(read_buffer, sizeof(unsigned char), 2, fp);
-//            Huffman_Node* r = decode(&top_node, tem_tree,
-//                                     read_buffer,
-//                                     encoded_string_length,&decode_str_len,
-//                                     decode_char_list,fp_out);
-//            tem_tree = r;
-//        }
-//        if (decode_str_len != 0) {
-//            fwrite(decode_char_list, sizeof(unsigned char), decode_str_len, fp_out);
-//        }
-//        fclose(fp);
-//        fclose(fp_out);
-//    }
+        fp = fopen("/Users/wangeric/Documents/C++/mac/output.huffman", "rb");
+        fp_out = fopen("/Users/wangeric/Documents/C++/mac/original.txt", "wb");
+        fread(encoded_string_length, sizeof(int), 1, fp); //encode string 长度
+        fread(structure_length, sizeof(int), 1, fp); //树结构长度
+        unsigned char* structure = malloc(sizeof(unsigned char) * (*structure_length)); //树结构
+        fread(structure, sizeof(unsigned char), *structure_length, fp);
+        int rest = 1024 - 8 - *structure_length;
+        fseek(fp, rest, SEEK_CUR);
+        int bytes_of_encoded_string = *encoded_string_length == 0 ? 0 : ((*encoded_string_length + 8 - 1) / 8);
+    //    unsigned char* encoded_string = malloc(sizeof(unsigned char) * bytes_of_encoded_string); //encode string
+
+        Huffman_Node top_node;
+        reconstruct_huffman_tree(structure,&top_node, *structure_length);
+        Huffman_Node *tem_tree = malloc(sizeof(Huffman_Node));
+        tem_tree = &top_node;
+        unsigned char read_buffer[2];
+        int decode_str_len = 0;
+        unsigned char decode_char_list[100] = {0};
+        for (int x = 0;x < bytes_of_encoded_string; x ++) {
+            fread(read_buffer, sizeof(unsigned char), 2, fp);
+            Huffman_Node* r = decode(&top_node, tem_tree,
+                                     read_buffer,
+                                     encoded_string_length,&decode_str_len,
+                                     decode_char_list,fp_out);
+            tem_tree = r;
+        }
+        if (decode_str_len != 0) {
+            fwrite(decode_char_list, sizeof(unsigned char), decode_str_len, fp_out);
+        }
+        fclose(fp);
+        fclose(fp_out);
+    }
 //////==================================================================================================
-////
-////
 //////===========================================SEARCH================================================
-////
-//     else if(strcmp(argv[1],"-s") == 0) {
+     else if(strcmp(argv[1],"-s") == 0) {
+         printf("yes search!\n");
+         printf("the search item is %s\n", argv[2]);
          FILE* fp;
-//         FILE* fp_out = NULL;
-         fp = fopen("/Users/wangeric/Documents/C++/mac/output.huffman", "rb");
+//         fp = fopen("/Users/wangeric/Documents/C++/mac/output.huffman", "rb");
+         fp = fopen(argv[3], "rb");
          int *structure_length = malloc(sizeof(int));
 
          int *encoded_string_length = malloc(sizeof(int));
@@ -917,54 +920,70 @@ int main(){
          tem_tree = &top_node;
          unsigned char read_buffer[2];
          int decode_str_len = 0;
-//         int s = *encoded_string_length;
-
          int search_length;
-        char search_string[] = "aa";
-         search_length = sizeof(search_string) / sizeof(unsigned char) - 1;
-
+//         search_length = sizeof(*argv[2]) / (sizeof(unsigned char));
+         search_length = (int)strlen(argv[2]);
          int original_char_len = search_length * 3;
+         printf("search_length is : %d\n", search_length);
+         printf("the search char is %s\n", argv[2]);
          unsigned char *buffer = malloc(sizeof(unsigned char) * (search_length * 3) + 1);
 //         int finish_flag = 0;
-        unsigned char *rest_str = malloc(sizeof(unsigned char) * (search_length *3));
-    
+        unsigned char *rest_buffer = malloc(sizeof(unsigned char) * 17);
+         memset(rest_buffer, 0,17);
         //记录还剩下多少个bits剩余
         int rest_buffer_count = 0;
         //每次读2个bytes, 直到读满查询字符串长度的3倍，作为read buffer
         //如果读满 search_length * 3,则停止
         //如果未读满 search_length * 3就提前停止，那么将保留这个read_buffer中剩余Bits对应的 0/1 数组。
+         int copy_encode_string_length = *encoded_string_length;
          while (bytes_of_encoded_string > 0 && encoded_string_length > 0 && original_char_len > 0) {
              fread(read_buffer, sizeof(unsigned char), 2, fp);
              Huffman_Node* r = search_decode(&top_node, tem_tree,
                                       read_buffer,&original_char_len,
                                       encoded_string_length,&decode_str_len,
-                                      buffer, rest_str,&rest_buffer_count);
+                                      buffer, rest_buffer,&rest_buffer_count);
              tem_tree = r;
              bytes_of_encoded_string -=2;
          }
-    unsigned char **original_txt_buffer = malloc(sizeof(unsigned char*) * 2);
-    unsigned char *string_1 = malloc(sizeof(unsigned char) * search_length);
-    unsigned char *string_2 = malloc(sizeof(unsigned char) * search_length);
-    for (int j = 0; j < search_length; j++) {
-        string_1[j % search_length] = buffer[j];
-    }
-    for (int j = search_length; j <search_length * 2; j++) {
-        string_2[j % search_length] = buffer[j];
-    }
-    original_txt_buffer[0] = string_1;
-    original_txt_buffer[1] = string_2;
-    int current_buffer_index = search_length * 2;
-    
-//    search(unsigned char **t_chars,char* p_chars, int search_length,
-//           FILE* fp_search,unsigned char *buffer,int *current_buffer_index,
-//           unsigned char *rest_buffer,int *rest_buffer_index,int *current_rest_buffer_index,Huffman_Node* tree)
-    
-    //初始化目前读到的rest_buffer的index = 0;
-    int current_rest_buffer_index = 0;
-    search(original_txt_buffer, search_string, search_length, fp,
-           buffer,&current_buffer_index,rest_str,&rest_buffer_count,&current_rest_buffer_index,&top_node);
+         if (copy_encode_string_length == search_length) {
+             for (int i = 0; i < search_length; i++) {
+                 if (buffer[i] != *argv[i]) {
+                     printf("%d\n",0);
+                     return 0;
+                 }
+             }
+             printf("%d\n",1);
+             return 1;
+         }
          
-//     }
+         
+        unsigned char **original_txt_buffer = malloc(sizeof(unsigned char*) * 2);
+        unsigned char *string_1 = malloc(sizeof(unsigned char) * search_length);
+        unsigned char *string_2 = malloc(sizeof(unsigned char) * search_length);
+         int buffer_count = 0;
+        for (int j = 0; j < search_length && buffer[j] != '\0'; j++) {
+            string_1[j % search_length] = buffer[j];
+            buffer_count ++;
+        }
+        for (int j = search_length; j <search_length * 2 && buffer[j] != '\0'; j++) {
+            buffer_count++;
+            string_2[j % search_length] = buffer[j];
+        }
+         if (buffer_count < search_length) {
+             printf("shorter then search_ string");
+             return 0;
+         }
+         
+        original_txt_buffer[0] = string_1;
+        original_txt_buffer[1] = string_2;
+        int *current_buffer_index = malloc(sizeof(int));
+        *current_buffer_index = search_length * 2;
+        //初始化目前读到的rest_buffer的index = 0;
+        int *current_rest_buffer_index = malloc(sizeof(int));
+        *current_rest_buffer_index = 0;
+        search(original_txt_buffer, argv[2], search_length, fp,
+               buffer,current_buffer_index,rest_buffer,&rest_buffer_count,current_rest_buffer_index,&top_node,encoded_string_length);
+         }
     return 0;
 }
 //==================================================================================================
