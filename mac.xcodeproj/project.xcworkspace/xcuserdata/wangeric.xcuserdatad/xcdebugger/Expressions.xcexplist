@@ -217,22 +217,19 @@
          contextName = "main:9319_ass1.c">
          <PersistentStrings>
             <PersistentString
-               value = "sizeof(*argv[2])/sizeof(*argv[2][0])">
-            </PersistentString>
-            <PersistentString
-               value = "rest_buffer">
-            </PersistentString>
-            <PersistentString
                value = "original_txt_buffer[0]">
             </PersistentString>
             <PersistentString
-               value = "buffer[j]">
-            </PersistentString>
-            <PersistentString
-               value = "*argv[2]">
+               value = "buffer[i]">
             </PersistentString>
             <PersistentString
                value = "&amp;original_string[0]">
+            </PersistentString>
+            <PersistentString
+               value = "argv[2]">
+            </PersistentString>
+            <PersistentString
+               value = "rest_buffer">
             </PersistentString>
             <PersistentString
                value = "original_txt_buffer[1]">
@@ -241,13 +238,22 @@
                value = "sizeof(argv[2])">
             </PersistentString>
             <PersistentString
+               value = "*argv[2]">
+            </PersistentString>
+            <PersistentString
+               value = "argv[2][i]">
+            </PersistentString>
+            <PersistentString
                value = "sizeof(unsigned char)">
             </PersistentString>
             <PersistentString
                value = "str_len(argv[2])">
             </PersistentString>
             <PersistentString
-               value = "argv[2]">
+               value = "*argv[i]">
+            </PersistentString>
+            <PersistentString
+               value = "sizeof(*argv[2])/sizeof(*argv[2][0])">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
