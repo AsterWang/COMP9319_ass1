@@ -918,15 +918,31 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "9319_ass1.c"
-            timestampString = "556613619.538146"
+            timestampString = "556640977.07101"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "406"
-            endingLineNumber = "406"
+            startingLineNumber = "468"
+            endingLineNumber = "468"
+            landmarkName = "search"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "9319_ass1.c"
+            timestampString = "556640977.071455"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "350"
+            endingLineNumber = "350"
             landmarkName = "fgetc_buffer"
             landmarkType = "9">
          </BreakpointContent>
@@ -938,28 +954,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "9319_ass1.c"
-            timestampString = "556613619.5386029"
+            timestampString = "556640977.071746"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "812"
-            endingLineNumber = "812"
-            landmarkName = "main"
-            landmarkType = "9">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "9319_ass1.c"
-            timestampString = "556613619.538924"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "850"
-            endingLineNumber = "850"
-            landmarkName = "main"
+            startingLineNumber = "474"
+            endingLineNumber = "474"
+            landmarkName = "search"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
@@ -970,12 +970,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "9319_ass1.c"
-            timestampString = "556613619.53921"
+            timestampString = "556640977.071959"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "682"
-            endingLineNumber = "682"
-            landmarkName = "main"
+            startingLineNumber = "517"
+            endingLineNumber = "517"
+            landmarkName = "search"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
@@ -986,28 +986,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "9319_ass1.c"
-            timestampString = "556613619.539423"
+            timestampString = "556640977.072282"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "674"
-            endingLineNumber = "674"
-            landmarkName = "main"
-            landmarkType = "9">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "9319_ass1.c"
-            timestampString = "556613619.539613"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "686"
-            endingLineNumber = "686"
-            landmarkName = "main"
+            startingLineNumber = "459"
+            endingLineNumber = "459"
+            landmarkName = "search"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>

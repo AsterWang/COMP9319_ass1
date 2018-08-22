@@ -6,16 +6,22 @@
          contextName = "search:9319_ass1.c">
          <PersistentStrings>
             <PersistentString
-               value = "t_chars[0]">
+               value = "t_chars[1]">
+            </PersistentString>
+            <PersistentString
+               value = "row">
             </PersistentString>
             <PersistentString
                value = "t_chars[row][column]">
             </PersistentString>
             <PersistentString
-               value = "rest_buffer[1]">
+               value = "buffer">
             </PersistentString>
             <PersistentString
-               value = "t_chars[1]">
+               value = "column">
+            </PersistentString>
+            <PersistentString
+               value = "t_chars[0]">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -90,13 +96,16 @@
                value = "rest_buffer[1]">
             </PersistentString>
             <PersistentString
+               value = "buffer[6]">
+            </PersistentString>
+            <PersistentString
                value = "i">
             </PersistentString>
             <PersistentString
                value = "rest_buffer[i]">
             </PersistentString>
             <PersistentString
-               value = "*encoded_string_length">
+               value = "buffer[5]">
             </PersistentString>
             <PersistentString
                value = "search_length">
@@ -136,19 +145,19 @@
                value = "arr[0]">
             </PersistentString>
             <PersistentString
-               value = "copy_tree-&gt;character">
+               value = "huffman_code_dict-&gt;codes[y]">
             </PersistentString>
             <PersistentString
-               value = "arr[i] &amp; (*temp)">
+               value = "arr[i]">
             </PersistentString>
             <PersistentString
                value = "arr[1]">
             </PersistentString>
             <PersistentString
-               value = "huffman_code_dict-&gt;codes[y]">
+               value = "copy_tree-&gt;character">
             </PersistentString>
             <PersistentString
-               value = "arr[i]">
+               value = "arr[i] &amp; (*temp)">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -244,10 +253,10 @@
                value = "argv[2][i]">
             </PersistentString>
             <PersistentString
-               value = "sizeof(unsigned char)">
+               value = "str_len(argv[2])">
             </PersistentString>
             <PersistentString
-               value = "str_len(argv[2])">
+               value = "sizeof(unsigned char)">
             </PersistentString>
             <PersistentString
                value = "*argv[i]">
@@ -381,7 +390,7 @@
                value = "bitarray[row]">
             </PersistentString>
             <PersistentString
-               value = "huffman_code_dict-&gt;codes[i]">
+               value = " ((0x80 &gt;&gt; move_bits))">
             </PersistentString>
             <PersistentString
                value = "bitarray[0]">
@@ -393,7 +402,7 @@
                value = "huffman_code_dict-&gt;character[i]">
             </PersistentString>
             <PersistentString
-               value = " ((0x80 &gt;&gt; move_bits))">
+               value = "huffman_code_dict-&gt;codes[i]">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
